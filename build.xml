@@ -1,0 +1,101 @@
+<project name="Calculator" basedir="." default="main">
+
+    <property name="spotbugs.home" value="spotbugs-4.5.0"/>
+    <property name="spotbugs.lib.antfile" value="${spotbugs.home}/lib/spotbugs-ant.jar"/>
+    <taskdef name="spotbugs"
+             classname="edu.umd.cs.findbugs.anttask.FindBugsTask"
+             classpath="${spotbugs.lib.antfile}"/>
+    
+    <property name="build.dir"   value="build"/>
+    <property name="classes.dir" value="${build.dir}/classes"/>
+    <property name="classes.tests.dir" value="${build.dir}/classes/test"/>
+    <property name="jar.dir"     value="${build.dir}/jar"/>
+    <property name="junit.jar"     value="junit/junit-platform-console-standalone-1.8.1.jar"/>
+    <property name="test.reports"     value="${build.dir}/test_reports"/>
+
+    <property name="ast.dir"  value="ast/"/>
+    <property name="parser.dir"  value="./parser"/>
+    <property name="calculator.dir"  value="./calculator"/>
+    <property name="tests.dir"  value="./tests"/>
+
+    <property name="main-class"  value="org.ioopm.calculator.Calculator"/>
+    <property name="test-class"  value="org.ioopm.calculator.tests.RunTests"/>
+
+
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="compile_ast">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="${ast.dir}" destdir="${classes.dir}" includeantruntime="false"/>
+    </target>
+
+    <target name="compile_parser">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="${parser.dir}" destdir="${classes.dir}" includeantruntime="false"/>
+    </target>
+
+    <target name="compile_calculator" depends="compile_ast,compile_parser">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="${calculator.dir}" destdir="${classes.dir}" includeantruntime="false"/>
+    </target>
+
+    <target name="compile_tests" depends="compile_ast, compile_parser, compile_calculator">
+        <mkdir dir="${classes.tests.dir}"/>
+        <javac srcdir="${tests.dir}" destdir="${classes.tests.dir}" includeantruntime="false">
+          <compilerarg value="-Xlint:unchecked"/>
+          <classpath location="${classes.dir}"/>
+          <classpath location="${junit.jar}"/>
+        </javac>
+    </target>
+
+    <target name="compile" depends="compile_calculator, compile_tests"/>
+
+    <target name="jar" depends="compile">
+        <mkdir dir="${jar.dir}"/>
+        <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main-class}"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="run" depends="jar">
+        <java jar="${jar.dir}/${ant.project.name}.jar" fork="true"/>
+    </target>
+
+    <target name="test" depends="compile">
+      <delete dir="${test.reports}"/>
+      <mkdir dir="${test.reports}"/>
+      <junit haltonfailure="true" printsummary="yes" showoutput="yes">
+        <formatter type="plain"/>
+        <classpath location="${classes.dir}"/>
+        <classpath location="${classes.tests.dir}"/>
+        <classpath location="${junit.jar}"/>
+        <batchtest fork="true" todir="${test.reports}">
+          <fileset dir="${classes.tests.dir}">
+            <exclude name="**/Pair.class"/>
+          </fileset>
+        </batchtest>
+      </junit>
+    </target>
+
+    <target name="spotbugs" depends="compile">
+      <mkdir dir="${spotbugs.output.dir}"/>
+      <spotbugs home="${spotbugs.home}" 
+          reportLevel="low"
+          effort="max" 
+          setExitCode="false"
+          failOnError="true">
+        <fileset dir="${classes.dir}"/>
+        <fileset dir="${classes.tests.dir}"/>
+        <auxClassPath path="${junit.jar}"/>
+      </spotbugs>
+    </target>
+
+    <target name="clean-build" depends="clean,jar"/>
+
+    <target name="main" depends="clean,run"/>
+
+</project>
